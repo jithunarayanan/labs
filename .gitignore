@@ -1,0 +1,12 @@
+.git
+.DS_Store
+.vagrant
+.terraform
+.terraform.lock.hcl
+ansible/playbooks/.DS_Store
+ansible/.DS_Store
+openshift/playbooks/.DS_Store
+openshift/.DS_Store
+k3s_files.tar.gz
+terraform.tfstate
+terraform.tfstate.backup

@@ -1,0 +1,71 @@
+VAGRANTFILE_API_VERSION = "2"
+VAGRANT_DISABLE_VBOXSYMLINKCREATE = "1"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  # Use the same SSH key for each machine
+  config.ssh.insert_key = false
+  config.vm.box_check_update = false
+
+  # K3S Node1
+  config.vm.define "node1" do |node1|
+    node1.vm.box = "generic/ubuntu2204"
+    node1.vm.hostname = "node1.lab.example.com"
+    node1.vm.network "private_network", ip: "10.10.2.201"
+    node1.vm.provider "virtualbox" do |vb|
+      vb.customize ['modifyvm', :id, '--memory', '1024']
+    end
+    # Provisioning scripts
+    node1.vm.provision :shell, inline: "sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config; sudo systemctl restart sshd;", run: "always"
+  end
+
+  # K3S Node2
+  config.vm.define "node2" do |node2|
+    node2.vm.box = "generic/ubuntu2204"
+    node2.vm.hostname = "node2.lab.example.com"
+    node2.vm.network "private_network", ip: "10.10.2.202"
+    node2.vm.provider "virtualbox" do |vb|
+      vb.customize ['modifyvm', :id, '--memory', '1024']
+    end
+    # Provisioning scripts
+    node2.vm.provision :shell, inline: "sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config; sudo systemctl restart sshd;", run: "always"
+  end
+
+  # K3S Master
+  config.vm.define "master" do |master|
+    master.vm.box = "generic/ubuntu2204"
+    master.vm.hostname = "master.lab.example.com"
+    master.vm.network "private_network", ip: "10.10.2.10"
+    master.vm.provider :virtualbox do |vb|
+      vb.memory = "2048"
+      vb.cpus = 2
+    end
+
+    # Provisioning scripts
+    master.vm.provision :shell, inline: "sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config; sudo systemctl restart sshd;", run: "always"
+
+  end
+
+  # Workstation
+  config.vm.define "proxy" do |proxy|
+    proxy.vm.box = "generic/ubuntu2204"
+    proxy.vm.hostname = "workstation.lab.example.com"
+    proxy.vm.network "private_network", ip: "10.10.1.10"
+    proxy.vm.provider :virtualbox do |vb|
+      vb.memory = "2048"
+      vb.cpus = 2
+    end
+
+    # Provisioning scripts
+    proxy.vm.provision :shell, inline: "sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config; sudo systemctl restart sshd;", run: "always"
+    # Synced folder and file
+    proxy.vm.synced_folder "./ansible", "/vagrant", type: "rsync", rsync__exclude: [".git/", "*.vdi"]
+    proxy.vm.provision :shell, inline: "bash /vagrant/install.sh"
+    proxy.vm.provision :ansible_local do |ansible|
+    ansible.playbook = "/vagrant/playbooks/main.yml"
+    ansible.install = false
+    ansible.inventory_path = "/vagrant/inventory"
+    ansible.config_file = "/vagrant/ansible.cfg"
+    ansible.limit = "all"
+  end
+end
+end

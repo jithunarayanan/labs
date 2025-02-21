@@ -1,0 +1,5 @@
+aws_region     = "ap-south-2"
+aws_access_key = "your_access_key"
+aws_secret_key = "your_secret_key"
+ami_id         = "ami-03aaeb1f15623d169"
+instance_type  = "t3.micro"

@@ -1,0 +1,6 @@
+---
+- import_playbook: hosts.yml
+- import_playbook: installkubectl.yml
+- import_playbook: install.yml
+- import_playbook: configure.yml
+...

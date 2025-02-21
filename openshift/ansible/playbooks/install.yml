@@ -1,0 +1,36 @@
+---
+- name: Install K3s cluster
+  hosts: master
+  become: true
+  strategy: free
+  gather_facts: False
+  # ignore_errors: true
+  vars:
+    master_dns: "master.lab.example.com" 
+  tasks:
+    - name: Install K3s master
+      shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--tls-san {{ master_dns }}" sh -s -
+    - name: Copy K3s node token to control node
+      fetch:
+        src: /var/lib/rancher/k3s/server/node-token
+        dest: /tmp/node-token
+        flat: yes
+    - name: Copy kubeconfig file to control node
+      fetch:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: /home/ubuntu/.kube/config
+        flat: yes
+- name: Install K3s agent nodes
+  hosts: nodes
+  become: true
+  strategy: free
+  gather_facts: False
+  # ignore_errors: true
+  vars:
+    master_dns: "master.lab.example.com" 
+    node_token: "{{ lookup('file', '/tmp/node-token') }}"
+  tasks:
+    - name: Install K3s agent
+      shell: |
+        curl -sfL https://get.k3s.io | K3S_URL=https://{{ master_dns }}:6443 K3S_TOKEN={{ node_token }} sh -
