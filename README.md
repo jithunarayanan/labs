@@ -1,6 +1,6 @@
 # Labs
 ## Introduction
-Welcome to the Labs repository! This repository contains various lab setups that I used for my Red Hat certification exam preparation. The repository provides a collection of lab environments designed to help you prepare for Red Hat certifications. These setups will deploy the infrastructure on demand and will be destroyed after use.
+Welcome to the Labs repository! This repository contains lab setups that I used for my Red Hat certification exam preparation. The repository provides a collection of lab environments designed to help you prepare for Red Hat certifications. These setups will deploy the infrastructure on demand and will be destroyed after use.
 
 ## Lab Setups
 
