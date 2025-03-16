@@ -1,127 +1,127 @@
 # VPCssh 
-resource "aws_vpc" "k3s_vpc" {
+resource "aws_vpc" "lab_vpc" {
   cidr_block           = "10.10.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
 
   tags = {
-    Name    = "k3s_vpc"
+    Name    = "lab_vpc"
     Env     = "Practice"
   }
 }
 
 # Internet Gateway for the Public Subnet
-resource "aws_internet_gateway" "k3s_igw" {
-  vpc_id = aws_vpc.k3s_vpc.id
+resource "aws_internet_gateway" "lab_igw" {
+  vpc_id = aws_vpc.lab_vpc.id
 
   tags = {
-    Name    = "k3s_igw"
+    Name    = "lab_igw"
     Env     = "Practice"
   }
 }
 
 # Elastic IP for the NAT Gateway
-resource "aws_eip" "k3s_eip" {
+resource "aws_eip" "lab_eip" {
 
   tags = {
-    Name    = "k3s_eip"
+    Name    = "lab_eip"
     Env     = "Practice"
   }
 }
 
 # NAT Gateway for the Private Subnet
-resource "aws_nat_gateway" "k3s_nat_gateway" {
-  allocation_id = aws_eip.k3s_eip.id
-  subnet_id     = aws_subnet.k3s_public_subnet.id
+resource "aws_nat_gateway" "lab_nat_gateway" {
+  allocation_id = aws_eip.lab_eip.id
+  subnet_id     = aws_subnet.lab_public_subnet.id
 
   tags = {
-    Name    = "k3s_nat_gateway"
+    Name    = "lab_nat_gateway"
     Env     = "Practice"
   }
 }
 
 # Public Subnet
-resource "aws_subnet" "k3s_public_subnet" {
-  vpc_id                  = aws_vpc.k3s_vpc.id
+resource "aws_subnet" "lab_public_subnet" {
+  vpc_id                  = aws_vpc.lab_vpc.id
   cidr_block              = "10.10.1.0/24"
   availability_zone       = local.public_az
   map_public_ip_on_launch = true
 
   tags = {
-    Name    = "k3s_public_subnet"
+    Name    = "lab_public_subnet"
     Env     = "Practice"
   }
 }
 
 # Private Subnet
-resource "aws_subnet" "k3s_private_subnet" {
-  vpc_id                  = aws_vpc.k3s_vpc.id
+resource "aws_subnet" "lab_private_subnet" {
+  vpc_id                  = aws_vpc.lab_vpc.id
   cidr_block              = "10.10.2.0/24"
   availability_zone       = local.private_az
 
   tags = {
-    Name    = "k3s_private_subnet"
+    Name    = "lab_private_subnet"
     Env     = "Practice"
   }
 }
 
 # Route Table for Public Subnet
-resource "aws_route_table" "k3s_public_rt" {
-  vpc_id = aws_vpc.k3s_vpc.id
+resource "aws_route_table" "lab_public_rt" {
+  vpc_id = aws_vpc.lab_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.k3s_igw.id
+    gateway_id = aws_internet_gateway.lab_igw.id
   }
 
   tags = {
-    Name    = "k3s_public_rt"
+    Name    = "lab_public_rt"
     Env     = "Practice"
   }
 }
 
 # Route Table for Private Subnet
-resource "aws_route_table" "k3s_private_rt" {
-  vpc_id = aws_vpc.k3s_vpc.id
+resource "aws_route_table" "lab_private_rt" {
+  vpc_id = aws_vpc.lab_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.k3s_nat_gateway.id
+    gateway_id = aws_nat_gateway.lab_nat_gateway.id
   }
 
   tags = {
-    Name    = "k3s_private_rt"
+    Name    = "lab_private_rt"
     Env     = "Practice"
   }
 }
 
 # Associate Route Table with Public Subnet
-resource "aws_route_table_association" "k3s_public_subnet_association" {
-  subnet_id      = aws_subnet.k3s_public_subnet.id
-  route_table_id = aws_route_table.k3s_public_rt.id
+resource "aws_route_table_association" "lab_public_subnet_association" {
+  subnet_id      = aws_subnet.lab_public_subnet.id
+  route_table_id = aws_route_table.lab_public_rt.id
 }
 
 
 # Associate Route Table with Private Subnet
-resource "aws_route_table_association" "k3s_private_subnet_association" {
-  subnet_id      = aws_subnet.k3s_private_subnet.id
-  route_table_id = aws_route_table.k3s_private_rt.id
+resource "aws_route_table_association" "lab_private_subnet_association" {
+  subnet_id      = aws_subnet.lab_private_subnet.id
+  route_table_id = aws_route_table.lab_private_rt.id
 }
 
-# Network ACL for k3s resources
-resource "aws_network_acl" "k3s_nacl" {
-  vpc_id = aws_vpc.k3s_vpc.id
+# Network ACL for lab resources
+resource "aws_network_acl" "lab_nacl" {
+  vpc_id = aws_vpc.lab_vpc.id
 
   tags = {
-    Name    = "k3s_nacl"
+    Name    = "lab_nacl"
     Env     = "Practice"
   }   
   
 }
 
 # Ingress rule allowing all traffic from any IP and any port
-resource "aws_network_acl_rule" "k3s_ingress" {
-  network_acl_id = aws_network_acl.k3s_nacl.id
+resource "aws_network_acl_rule" "lab_ingress" {
+  network_acl_id = aws_network_acl.lab_nacl.id
   rule_number    = 100
   egress         = false                   # Ingress rule
   protocol       = -1                      # All protocols
@@ -132,8 +132,8 @@ resource "aws_network_acl_rule" "k3s_ingress" {
 }
 
 # Egress rule allowing all traffic to any IP and any port
-resource "aws_network_acl_rule" "k3s_egress" {
-  network_acl_id = aws_network_acl.k3s_nacl.id
+resource "aws_network_acl_rule" "lab_egress" {
+  network_acl_id = aws_network_acl.lab_nacl.id
   rule_number    = 100
   egress         = true                    # Egress rule
   protocol       = -1                      # All protocols
@@ -144,21 +144,21 @@ resource "aws_network_acl_rule" "k3s_egress" {
 }
 
 # Associate public subnet with the NACL
-resource "aws_network_acl_association" "k3s_public_subnet_association" {
-  subnet_id      = aws_subnet.k3s_public_subnet.id
-  network_acl_id = aws_network_acl.k3s_nacl.id
+resource "aws_network_acl_association" "lab_public_subnet_association" {
+  subnet_id      = aws_subnet.lab_public_subnet.id
+  network_acl_id = aws_network_acl.lab_nacl.id
 }
 
 # Associate private subnet with the NACL
-resource "aws_network_acl_association" "k3s_private_subnet_association" {
-  subnet_id      = aws_subnet.k3s_private_subnet.id
-  network_acl_id = aws_network_acl.k3s_nacl.id
+resource "aws_network_acl_association" "lab_private_subnet_association" {
+  subnet_id      = aws_subnet.lab_private_subnet.id
+  network_acl_id = aws_network_acl.lab_nacl.id
 }
 
 
 # Security Group for Bastion & Proxy
-resource "aws_security_group" "k3s_proxy_sg" {
-  vpc_id = aws_vpc.k3s_vpc.id
+resource "aws_security_group" "lab_proxy_sg" {
+  vpc_id = aws_vpc.lab_vpc.id
 
   ingress {
     from_port   = 22
@@ -203,20 +203,20 @@ resource "aws_security_group" "k3s_proxy_sg" {
   }
 
   tags = {
-    Name    = "k3s_proxy_sg"
+    Name    = "lab_proxy_sg"
     Env     = "Practice"
   }
 }
 
-# Security Group for k3s Cluster
-resource "aws_security_group" "k3s_cluster_sg" {
-  vpc_id = aws_vpc.k3s_vpc.id
+# Security Group for lab Cluster
+resource "aws_security_group" "lab_cluster_sg" {
+  vpc_id = aws_vpc.lab_vpc.id
 
   ingress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    security_groups = [aws_security_group.k3s_proxy_sg.id] # Allow all inbound traffic from the proxy
+    security_groups = [aws_security_group.lab_proxy_sg.id] # Allow all inbound traffic from the proxy
   }
 
   egress {
@@ -227,14 +227,14 @@ resource "aws_security_group" "k3s_cluster_sg" {
   }
 
   tags = {
-    Name      = "k3s_cluster_sg"
+    Name      = "lab_cluster_sg"
     Env       = "practice"
     
   }
 }
 
-resource "aws_key_pair" "k3s_key" {
-  key_name   = "k3s_key"
+resource "aws_key_pair" "lab_key" {
+  key_name   = "lab_key"
   public_key = file("~/.ssh/id_rsa.pub")
     
   tags     = {
@@ -244,44 +244,44 @@ resource "aws_key_pair" "k3s_key" {
 }
 
 # EC2 Instance for master in Private Subnet
-resource "aws_instance" "k3s_master" {
+resource "aws_instance" "lab_master" {
   count                       = 1
   ami                         = var.ami_id
   instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.k3s_private_subnet.id
+  subnet_id                   = aws_subnet.lab_private_subnet.id
   private_ip                  = "10.10.2.10"
-  security_groups             = [aws_security_group.k3s_cluster_sg.id]
+  security_groups             = [aws_security_group.lab_cluster_sg.id]
   associate_public_ip_address = false
-  key_name                    = "k3s_key"
+  key_name                    = "lab_key"
   root_block_device {
     volume_size = 12
     volume_type = "gp2"
   }
 
   tags = {
-    Name      = "k3s_master"
+    Name      = "lab_master"
     Cluster   = "controlplane"
     Env       = "practice"
   }
 }
 
 # EC2 Instances for Node in Private Subnet
-resource "aws_instance" "k3s_node" {
+resource "aws_instance" "lab_node" {
   count                       = 2
   ami                         = var.ami_id
   instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.k3s_private_subnet.id
+  subnet_id                   = aws_subnet.lab_private_subnet.id
   private_ip                  = "10.10.2.20${count.index + 1}"
-  security_groups             = [aws_security_group.k3s_cluster_sg.id]
+  security_groups             = [aws_security_group.lab_cluster_sg.id]
   associate_public_ip_address = false
-  key_name                    = "k3s_key"
+  key_name                    = "lab_key"
   root_block_device {
     volume_size = 12
     volume_type = "gp2"
   }
 
   tags = {
-    Name    = "k3s_node-${count.index + 1}"
+    Name    = "lab_node-${count.index + 1}"
     Cluster = "nodes"
     Env     = "Practice"
   }
@@ -291,33 +291,33 @@ resource "aws_instance" "k3s_node" {
 data "archive_file" "ansible_files" {
   type        = "tar.gz"
   source_dir  = "./ansible"
-  output_path = "./k3s_files.tar.gz"
+  output_path = "./lab_files.tar.gz"
 }
 
-# EC2 Instances for k3s proxy in Public Subnet
-resource "aws_instance" "k3s_proxy" {
+# EC2 Instances for lab proxy in Public Subnet
+resource "aws_instance" "lab_proxy" {
   count                       = 1
   ami                         = var.ami_id
   instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.k3s_public_subnet.id
+  subnet_id                   = aws_subnet.lab_public_subnet.id
   private_ip                  = "10.10.1.10"
-  security_groups             = [aws_security_group.k3s_proxy_sg.id]
+  security_groups             = [aws_security_group.lab_proxy_sg.id]
   associate_public_ip_address = true
-  key_name                    = "k3s_key"
+  key_name                    = "lab_key"
   root_block_device {
     volume_size = 12
     volume_type = "gp2"
   }
 
   tags = {
-    Name    = "k3s_proxy"
+    Name    = "lab_proxy"
     Env     = "Practice"
   }
 
 # Provisioner to copy the private key
   provisioner "file" {
     source        = "~/.ssh/id_rsa"
-    destination   = "/home/ubuntu/k3s_key.pem"
+    destination   = "/home/ubuntu/lab_key.pem"
 
     connection {
       type        = "ssh"
@@ -331,7 +331,7 @@ resource "aws_instance" "k3s_proxy" {
 # Provisioner to copy the files
   provisioner "file" {
     source        = data.archive_file.ansible_files.output_path
-    destination   = "/home/ubuntu/k3s_files.tar.gz"
+    destination   = "/home/ubuntu/lab_files.tar.gz"
 
     connection {
       type        = "ssh"
@@ -345,9 +345,9 @@ resource "aws_instance" "k3s_proxy" {
 # Provisioner to set permissions for the copied key
   provisioner "remote-exec" {
       inline = [
-      "tar -xzf /home/ubuntu/k3s_files.tar.gz -C /home/ubuntu/",
-      "rm /home/ubuntu/k3s_files.tar.gz ",
-      "chmod 400 /home/ubuntu/k3s_key.pem",
+      "tar -xzf /home/ubuntu/lab_files.tar.gz -C /home/ubuntu/",
+      "rm /home/ubuntu/lab_files.tar.gz ",
+      "chmod 400 /home/ubuntu/lab_key.pem",
       "chmod +x /home/ubuntu/install.sh",
       "bash /home/ubuntu/install.sh",
       "ansible-playbook playbooks/main.yml"
@@ -361,5 +361,3 @@ resource "aws_instance" "k3s_proxy" {
     }
   }
 }
-
-

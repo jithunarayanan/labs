@@ -5,8 +5,9 @@ Welcome to the Labs repository! This repository contains lab setups that I used 
 ## Lab Setups
 
 Here are some of the lab setups included in this repository:
-
-- **Lab 3:** openshift
+- **Lab 1:** RHCSA
+- **Lab 2:** RHCE
+- **Lab 3:** Kubernets
 
 ## Usage
 
