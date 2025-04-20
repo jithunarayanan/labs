@@ -1,0 +1,57 @@
+VAGRANTFILE_API_VERSION = "2"
+VAGRANT_DISABLE_VBOXSYMLINKCREATE = "1"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  # Use the same SSH key for each machine
+  config.ssh.insert_key = false
+  config.vm.box_check_update = false
+
+  ## etcd
+  config.vm.define "etcd" do |etcd|
+    etcd.vm.box = "ubuntu/jammy64"
+    etcd.vm.hostname = "etcd.lab.com"
+    etcd.vm.network "private_network", ip: "10.10.1.145"
+    etcd.vm.provider "virtualbox" do |vb|
+      vb.memory = "2048"
+      vb.cpus = 2
+    end
+  end
+  ##master
+  config.vm.define "master" do |master|
+    master.vm.box = "ubuntu/jammy64"
+    master.vm.hostname = "master.lab.com"
+    master.vm.network "private_network", ip: "10.10.1.155"
+    master.vm.provider "virtualbox" do |vb|
+      vb.memory = "2048"
+      vb.cpus = 2
+    end
+  end
+  ## node1
+  config.vm.define "node1" do |node1|
+    node1.vm.box = "ubuntu/jammy64"
+    node1.vm.hostname = "node1.lab.com"
+    node1.vm.network "private_network", ip: "10.10.1.125"
+    node1.vm.provider "virtualbox" do |vb|
+      vb.memory = "2048"
+      vb.cpus = 2
+    end
+  end
+  ## node2
+  config.vm.define "node2" do |node2|
+    node2.vm.box = "ubuntu/jammy64"
+    node2.vm.hostname = "node2.lab.com"
+    node2.vm.network "private_network", ip: "10.10.1.126"
+    node2.vm.provider "virtualbox" do |vb|
+      vb.memory = "2048"
+      vb.cpus = 2
+    end
+
+  # Correct Trigger to run ansible-playbook after node2 is provisioned
+    node2.trigger.after :up do |trigger|
+      trigger.info = "Running ansible-playbook ansible/main.yaml"
+      trigger.run = {
+        inline: "ansible-playbook -i playbooks/main.yaml"
+      }
+    end
+  end
+end

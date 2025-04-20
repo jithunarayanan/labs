@@ -23,6 +23,26 @@ Set up AWS credentials in your Terraform configuration or environment variables 
 terraform init
 terraform apply
 ```
+Once the environment is deployed, use SSH to connect to the workstation.
+
+```sh
+ssh ubuntu@<workstation_public_ip>
+```
+> **Note:** The workstation public IP will be displayed after the Terraform execution.
+
+Check the Kubernetes Cluster using:
+
+```sh
+kubectl get nodes
+kubectl get pods -A
+```
+### Destroy the Lab
+
+To destroy the lab after the practice session:
+
+```sh
+terraform destroy --auto-approve
+```
 
 ### Local Deployment using Vagrant
 
@@ -34,25 +54,10 @@ terraform apply
 Run Vagrant by executing the following command from the project root directory:
 
 ```sh
+cd vagrant
 vagrant up
 ```
-
 After the successful deployment, you can access your Kubernetes cluster.
-
-### Sign in to the Environment
-
-Once the environment is deployed, use SSH to connect to the workstation.
-
-- In AWS deployment:
-```sh
-ssh ubuntu@<workstation_public_ip>
-```
-> **Note:** The workstation public IP will be displayed after the Terraform execution.
-
-- In Local deployment:
-```sh
-vagrant ssh proxy
-```
 
 Check the Kubernetes Cluster using:
 
@@ -65,12 +70,6 @@ kubectl get pods -A
 
 To destroy the lab after the practice session:
 
-- **Terraform:**
-```sh
-terraform destroy --auto-approve
-```
-
-- **Vagrant:**
 ```sh
 vagrant destroy -f
 ```

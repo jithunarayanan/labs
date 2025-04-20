@@ -1,0 +1,34 @@
+---
+- name: Install K3s cluster
+  hosts: master
+  become: true
+  strategy: free
+  ignore_errors: true
+  tasks:
+    - name: Install K3s etcd
+      shell: |
+        curl -sfL https://get.k3s.io | sh -s server --cluster-init --token Iam234afucking6534idiot --node-ip  {{ hostvars['master']['ansible_host'] }} --write-kubeconfig-mode 664
+    - name: Copy kubeconfig file to control node  
+      fetch:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: ~/.kube/config
+        flat: yes
+- name: Install K3s master nodes
+  hosts: etcd
+  become: true
+  strategy: free
+  ignore_errors: true
+  tasks:
+    - name: Install K3s master
+      shell: |
+        curl -fL https://get.k3s.io | sh -s - server --token Iam234afucking6534idiot --disable-apiserver --disable-controller-manager --disable-scheduler --server https://{{ hostvars['master']['ansible_host'] }}:6443 --node-ip {{ hostvars['etcd']['ansible_host'] }} --write-kubeconfig-mode 664
+- name: Install K3s agent nodes
+  hosts: nodes
+  become: true
+  strategy: free
+  ignore_errors: true
+  tasks:
+    - name: Install K3s agent
+      shell: |
+        curl -sfL https://get.k3s.io | sh -s - agent --token Iam234afucking6534idiot --server https://{{ hostvars['master']['ansible_host'] }}:6443
+

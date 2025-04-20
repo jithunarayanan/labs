@@ -1,0 +1,13 @@
+---
+- name: Configure kubeconfig file and add oc in .bash_aliases
+  hosts: localhost
+  become: false
+  gather_facts: true
+  vars:
+    master_dns: "{{ hostvars['master']['ansible_host'] }}"
+  tasks:  
+    - name: Modify kubeconfig to use master IP
+      lineinfile:
+        path: ~/.kube/config
+        regexp: '^ *server: https://127\.0\.0\.1:6443'
+        line: '    server: https://{{ master_dns }}:6443'
