@@ -1,0 +1,41 @@
+---
+- name: Install K3s cluster
+  hosts: master
+  become: true
+  strategy: free
+  ignore_errors: true
+  vars:
+    host_dns: "{{ hostvars['master1']['ansible_host'] }}"
+  tasks:
+    - name: Install K3s master
+      shell: |
+        curl -sfL https://get.k3s.io | sh -s server --cluster-init --token Iam234afucking6534idiot --node-ip {{ host_dns }} --write-kubeconfig-mode 664
+    - name: Copy kubeconfig file to control node  
+      fetch:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: ~/.kube/config
+        flat: yes
+- name: Install K3s agent nodes
+  hosts: nodes
+  become: true
+  strategy: free
+  ignore_errors: true
+  vars:
+    master_dns: "{{ hostvars['master1']['ansible_host'] }}"
+  tasks:
+    - name: Install K3s agent
+      shell: |
+        curl -sfL https://get.k3s.io | sh -s - agent --token Iam234afucking6534idiot --server https://{{ master_dns }}:6443
+- name: Configure kubeconfig
+  hosts: localhost
+  become: false
+  gather_facts: true
+  vars:
+    master_dns: "{{ hostvars['master1']['ansible_host'] }}"
+  tasks:  
+    - name: Modify kubeconfig to use master IP
+      lineinfile:
+        path: ~/.kube/config
+        regexp: '^ *server: https://127\.0\.0\.1:6443'
+        line: '    server: https://{{ master_dns }}:6443'
+

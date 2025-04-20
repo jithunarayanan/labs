@@ -10,32 +10,12 @@ resource "aws_vpc" "lab_vpc" {
   }
 }
 
-# Internet Gateway for the Public Subnet
+# Internet Gateway 
 resource "aws_internet_gateway" "lab_igw" {
   vpc_id = aws_vpc.lab_vpc.id
 
   tags = {
     Name    = "lab_igw"
-    Env     = "Practice"
-  }
-}
-
-# Elastic IP for the NAT Gateway
-resource "aws_eip" "lab_eip" {
-
-  tags = {
-    Name    = "lab_eip"
-    Env     = "Practice"
-  }
-}
-
-# NAT Gateway for the Private Subnet
-resource "aws_nat_gateway" "lab_nat_gateway" {
-  allocation_id = aws_eip.lab_eip.id
-  subnet_id     = aws_subnet.lab_public_subnet.id
-
-  tags = {
-    Name    = "lab_nat_gateway"
     Env     = "Practice"
   }
 }
@@ -80,32 +60,11 @@ resource "aws_route_table" "lab_public_rt" {
   }
 }
 
-# Route Table for Private Subnet
-resource "aws_route_table" "lab_private_rt" {
-  vpc_id = aws_vpc.lab_vpc.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_nat_gateway.lab_nat_gateway.id
-  }
-
-  tags = {
-    Name    = "lab_private_rt"
-    Env     = "Practice"
-  }
-}
 
 # Associate Route Table with Public Subnet
 resource "aws_route_table_association" "lab_public_subnet_association" {
   subnet_id      = aws_subnet.lab_public_subnet.id
   route_table_id = aws_route_table.lab_public_rt.id
-}
-
-
-# Associate Route Table with Private Subnet
-resource "aws_route_table_association" "lab_private_subnet_association" {
-  subnet_id      = aws_subnet.lab_private_subnet.id
-  route_table_id = aws_route_table.lab_private_rt.id
 }
 
 # Network ACL for lab resources
@@ -157,7 +116,8 @@ resource "aws_network_acl_association" "lab_private_subnet_association" {
 
 
 # Security Group for Bastion & Proxy
-resource "aws_security_group" "lab_proxy_sg" {
+resource "aws_security_group" "k3s_sg" {
+  name = "k3s_sg"
   vpc_id = aws_vpc.lab_vpc.id
 
   ingress {
@@ -208,30 +168,6 @@ resource "aws_security_group" "lab_proxy_sg" {
   }
 }
 
-# Security Group for lab Cluster
-resource "aws_security_group" "lab_cluster_sg" {
-  vpc_id = aws_vpc.lab_vpc.id
-
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    security_groups = [aws_security_group.lab_proxy_sg.id] # Allow all inbound traffic from the proxy
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"] # Allow all outbound traffic
-  }
-
-  tags = {
-    Name      = "lab_cluster_sg"
-    Env       = "practice"
-    
-  }
-}
 
 resource "aws_key_pair" "lab_key" {
   key_name   = "lab_key"
@@ -243,37 +179,16 @@ resource "aws_key_pair" "lab_key" {
   }
 }
 
-# EC2 Instance for master in Private Subnet
-resource "aws_instance" "lab_master" {
-  count                       = 1
-  ami                         = var.ami_id
-  instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.lab_private_subnet.id
-  private_ip                  = "10.10.2.10"
-  security_groups             = [aws_security_group.lab_cluster_sg.id]
-  associate_public_ip_address = false
-  key_name                    = "lab_key"
-  root_block_device {
-    volume_size = 12
-    volume_type = "gp2"
-  }
 
-  tags = {
-    Name      = "lab_master"
-    Cluster   = "controlplane"
-    Env       = "practice"
-  }
-}
-
-# EC2 Instances for Node in Private Subnet
-resource "aws_instance" "lab_node" {
+# EC2 Instances for Nodes
+resource "aws_instance" "k3s_node" {
   count                       = 2
   ami                         = var.ami_id
   instance_type               = var.instance_type
-  subnet_id                   = aws_subnet.lab_private_subnet.id
-  private_ip                  = "10.10.2.20${count.index + 1}"
-  security_groups             = [aws_security_group.lab_cluster_sg.id]
-  associate_public_ip_address = false
+  subnet_id                   = aws_subnet.lab_public_subnet.id
+  private_ip                  = "10.10.1.20${count.index + 1}"
+  security_groups             = [aws_security_group.k3s_sg.id]
+  associate_public_ip_address = true
   key_name                    = "lab_key"
   root_block_device {
     volume_size = 12
@@ -287,21 +202,15 @@ resource "aws_instance" "lab_node" {
   }
 }
 
-# Create an archive of the Ansible files
-data "archive_file" "ansible_files" {
-  type        = "tar.gz"
-  source_dir  = "./ansible"
-  output_path = "./lab_files.tar.gz"
-}
 
-# EC2 Instances for lab proxy in Public Subnet
-resource "aws_instance" "lab_proxy" {
-  count                       = 1
+# EC2 Instances for master
+resource "aws_instance" "k3s_master" {
+  # count                       = 1
   ami                         = var.ami_id
   instance_type               = var.instance_type
   subnet_id                   = aws_subnet.lab_public_subnet.id
   private_ip                  = "10.10.1.10"
-  security_groups             = [aws_security_group.lab_proxy_sg.id]
+  security_groups             = [aws_security_group.k3s_sg.id]
   associate_public_ip_address = true
   key_name                    = "lab_key"
   root_block_device {
@@ -313,51 +222,28 @@ resource "aws_instance" "lab_proxy" {
     Name    = "lab_proxy"
     Env     = "Practice"
   }
+  
+}
 
-# Provisioner to copy the private key
-  provisioner "file" {
-    source        = "~/.ssh/id_rsa"
-    destination   = "/home/ubuntu/lab_key.pem"
+resource "local_file" "ansible_inventory" {
+  filename = "inventory.ini"
+  content  = <<EOT
+# ansible/inventory.ini
+[master]
+master1 ansible_host=${aws_instance.k3s_master.public_ip} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_ssh_common_args='-o StrictHostKeyChecking=no'
 
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = file("~/.ssh/id_rsa")
-      host        = self.public_ip
-    }
-  }
+[nodes]
+%{ for idx, ip in aws_instance.k3s_node[*].public_ip ~}
+node${idx + 1} ansible_host=${ip} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+%{ endfor ~}
 
+EOT
+}
 
-# Provisioner to copy the files
-  provisioner "file" {
-    source        = data.archive_file.ansible_files.output_path
-    destination   = "/home/ubuntu/lab_files.tar.gz"
+resource "null_resource" "ansible_run" {
+  depends_on = [aws_instance.k3s_master, aws_instance.k3s_node]
 
-    connection {
-      type        = "ssh"
-      user        = "ubuntu"
-      private_key = file("~/.ssh/id_rsa")
-      host        = self.public_ip
-    }
-  }
-
-
-# Provisioner to set permissions for the copied key
-  provisioner "remote-exec" {
-      inline = [
-      "tar -xzf /home/ubuntu/lab_files.tar.gz -C /home/ubuntu/",
-      "rm /home/ubuntu/lab_files.tar.gz ",
-      "chmod 400 /home/ubuntu/lab_key.pem",
-      "chmod +x /home/ubuntu/install.sh",
-      "bash /home/ubuntu/install.sh",
-      "ansible-playbook playbooks/main.yml"
-      ]
-
-    connection {
-      type          = "ssh"
-      user          = "ubuntu"
-      private_key   = file("~/.ssh/id_rsa")
-      host          = self.public_ip
-    }
+  provisioner "local-exec" {
+    command = "ansible-playbook -i inventory.ini playbook.yml"
   }
 }
